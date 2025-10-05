@@ -1,5 +1,4 @@
-/*  
-  Made By Yonzi
+/* Made By Yonzi
   Base : Lenwy
   WhatsApp : wa.me/62895428355980
   Youtube : @Keizi_Yo
@@ -12,6 +11,9 @@ const pino = require("pino")
 const chalk = require("chalk")
 const readline = require("readline")
 const { addWarning } = require("./warnings")
+
+// Metode Pairing
+const usePairingCode = true // <-- Tambahkan ini untuk mengaktifkan Pairing Code
 
 // Promt Input Terminal
 async function question(promt) {
@@ -27,13 +29,32 @@ async function connectToWhatsApp() {
 
     const Yonzi = makeWASocket({
         logger: pino({ level: "silent" }),
-        printQRInTerminal: true,
+        printQRInTerminal: !usePairingCode, // <-- Ubah agar tidak menampilkan QR jika pakai Pairing Code
         auth: state,
         browser: ['Ubuntu', 'Chrome', '20.0.04'],
         version: version,
         syncFullHistory: true,
         generateHighQualityLinkPreview: true
     })
+
+    // Handle Pairing Code
+    if (usePairingCode && !Yonzi.authState.creds.registered) {
+        try {
+            let phoneNumber = await question('☘️ Masukkan Nomor WhatsApp Anda (Contoh: 628xxxxxxxxxx):\n')
+            // Bersihkan input dan pastikan diawali '62'
+            phoneNumber = phoneNumber.replace(/[^0-9]/g, '')
+            if (!phoneNumber.startsWith('62')) {
+                phoneNumber = '62' + phoneNumber.substring(1) // Jika diawali 0, ganti dengan 62
+            }
+
+            const code = await Yonzi.requestPairingCode(phoneNumber.trim())
+            console.log(`🎁 Pairing Code Anda : ${chalk.yellow.bold(code)}`)
+            console.log("Masukkan kode ini di perangkat HP Anda (Pengaturan > Perangkat tertaut > Tautkan perangkat dengan nomor telepon).")
+        } catch (err) {
+            console.error(chalk.red('❌ Gagal mendapatkan pairing code:', err))
+        }
+    }
+
 
     // Menyimpan Sesi Login
     Yonzi.ev.on("creds.update", saveCreds)
